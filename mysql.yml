@@ -1,0 +1,19 @@
+version: '3.3'
+services:
+  db_mysql:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'bw_db'
+      MYSQL_USER: 'cbonilla'
+      MYSQL_PASSWORD: 'Banwire1234'
+      MYSQL_ROOT_PASSWORD: 'Banwire1234'
+    ports:
+
+      - '3306:3306'
+    container_name: mysql_db
+volumes:
+      - my-db:/var/lib/mysql
+# Names our volume
+volumes:
+  my-db:
