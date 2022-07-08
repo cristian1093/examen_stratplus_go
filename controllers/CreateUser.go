@@ -60,16 +60,16 @@ func (request *User) validationRequest() (messages []string, err error) {
 
 	} else {
 
-		//valida que la contraseña debe ser mayor a 6 caracteres
+		//valida que la contraseña debe contener minimo 6 caracteres
 		if len(request.Contrasena) < 6 {
-			messages = append(messages, "La contraseña no debe ser mayor a 6 caracteres")
-			err = fmt.Errorf("La contraseña no debe ser mayor a 6 caracteres")
+			messages = append(messages, "La contraseña debe contener minimo 6 caracteres")
+			err = fmt.Errorf("La contraseña debe contener minimo 6 caracteres")
 		}
 
-		//valida que la contraseña debe ser menor a 12 caracteres
+		//valida que la contraseña solo puede contener un maximo 12 caracteres
 		if len(request.Contrasena) > 12 {
-			messages = append(messages, "La contraseña no debe ser menor a 12 caracteres")
-			err = fmt.Errorf("La contraseña no debe ser menor a 12 caracteres")
+			messages = append(messages, "La contraseña solo puede contener un maximo 12 caracteres")
+			err = fmt.Errorf("La contraseña solo puede contener un maximo 12 caracteres")
 		}
 
 		//valida que la contraseña debe contener al menos una mayúscula
