@@ -19,7 +19,7 @@ var (
 	err        error
 )
 
-//Database encapsulates database
+// Database encapsulates database
 type Database struct {
 	db    *sql.DB
 	codec *branca.Branca
@@ -53,7 +53,7 @@ func urlCreate() (url string) {
 	return
 }
 
-//Close function closes this database connection
+// Close function closes this database connection
 func Close() {
 	database.db.Close()
 

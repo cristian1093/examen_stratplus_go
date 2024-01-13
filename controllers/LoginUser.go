@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -11,22 +13,24 @@ import (
 )
 
 type LoginUserData struct {
-	Usuario    string `json:"usuario"`
-	Contrasena string `json:"contraseña"`
+	Id       string `json:"id"`
+	User     string `json:"user"`
+	Password string `json:"password"`
 }
 
 var mySigningKey = []byte("mysupersecret")
 
-//Función JWT
+//JWT function
 
-func GenerateJWT(usuario string) (string, error) {
+func GenerateJWT(user string, id int) (string, error) {
 
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 
 	claims["authorized"] = true
-	claims["email"] = usuario
+	claims["email"] = user
+	claims["id"] = id
 	claims["exp"] = time.Now().Add(time.Minute * 30)
 
 	tokenString, err := token.SignedString(mySigningKey)
@@ -40,26 +44,72 @@ func GenerateJWT(usuario string) (string, error) {
 
 }
 
-//valida el request del login
+func TokenMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+
+		// Check for the "Bearer " prefix and strip it
+		if len(tokenString) >= 7 && strings.ToUpper(tokenString[0:7]) == "BEARER " {
+			tokenString = tokenString[7:]
+		}
+
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			return mySigningKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+
+		// Extract user ID from the token claims
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+
+		userID, ok := claims["id"].(float64)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+
+		// Set the user ID in the Gin context
+		c.Set("userID", int(userID))
+
+		c.Next()
+	}
+}
+
+// validate the login request
 func (request *LoginUserData) ValidationLoginRequest() (messages []string, err error) {
 
-	//valida que el usuario es requerido
-	if len(request.Usuario) < 1 {
-		messages = append(messages, "El campo usuario es requerido")
-		err = fmt.Errorf("El campo usuario es requerido")
+	//validates that the user is required
+	if len(request.User) < 1 {
+		messages = append(messages, "The user field is required")
+		err = fmt.Errorf("The user field is required")
 
 	}
 
-	//valida que la contraseña es requerida
-	if len(request.Contrasena) < 1 {
-		messages = append(messages, "El campo contraseña es requerido")
-		err = fmt.Errorf("El campo contraseña es requerido")
+	//validates that the password is required
+	if len(request.Password) < 1 {
+		messages = append(messages, "Password field is required")
+		err = fmt.Errorf("Password field is required")
 
 	}
 	return
 }
 
-//Funcion general del login
+// General login function
 func LoginUser(c *gin.Context) {
 
 	var (
@@ -75,18 +125,19 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	// valida en que el login del usuario
-	response := models.LoginUser(request.Usuario, request.Contrasena)
+	// validates the user's login
+	response := models.LoginUser(request.User, request.Password)
 
 	response_int, _ := strconv.Atoi(response)
 
-	// retorna un error si el usuario o contraseña son incorrectos
+	// returns an error if the username or password is incorrect
 	if response_int == 0 {
-		c.JSON(401, gin.H{"messages": "usuario / contraseña incorrecto"})
+		c.JSON(401, gin.H{"messages": "user / contraseña incorrecto"})
 	} else {
+		response := models.InfoUser(request.User, request.Password)
 
-		//se invoca la funcion de jwt para retornar un token
-		tokenString, err := GenerateJWT(request.Usuario)
+		//the jwt function is invoked to return a token
+		tokenString, err := GenerateJWT(request.User, response[0].Id)
 
 		if err != nil {
 			fmt.Println("Errror generating token string")
